@@ -4,25 +4,25 @@
     {
       "id": 0,
       "seek": 0,
-      "start": 0.02,
-      "end": 15.08,
+      "start": 0.0,
+      "end": 19.0,
       "text": "...",
       "tokens": [
         50364,
         1097,
-        51388
+        51392
       ],
       "temperature": 0.0,
-      "avg_logprob": -1.3470224142074585,
+      "avg_logprob": -1.4416621923446655,
       "compression_ratio": 0.2727272727272727,
-      "no_speech_prob": 0.32281985878944397,
-      "confidence": 0.142,
+      "no_speech_prob": 0.05016394704580307,
+      "confidence": 0.158,
       "words": [
         {
           "text": "...",
-          "start": 0.02,
-          "end": 15.08,
-          "confidence": 0.142
+          "start": 0.0,
+          "end": 19.0,
+          "confidence": 0.158
         }
       ]
     }

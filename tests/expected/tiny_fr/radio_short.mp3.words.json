@@ -4,8 +4,8 @@
     {
       "id": 0,
       "seek": 0,
-      "start": 0.46,
-      "end": 1.48,
+      "start": 0.44,
+      "end": 1.46,
       "text": "...",
       "tokens": [
         50364,
@@ -13,15 +13,15 @@
         50614
       ],
       "temperature": 0.0,
-      "avg_logprob": -1.4191982746124268,
+      "avg_logprob": -1.4191969633102417,
       "compression_ratio": 0.2727272727272727,
       "no_speech_prob": 0.5110077261924744,
       "confidence": 0.223,
       "words": [
         {
           "text": "...",
-          "start": 0.46,
-          "end": 1.48,
+          "start": 0.44,
+          "end": 1.46,
           "confidence": 0.223
         }
       ]
@@ -29,8 +29,8 @@
     {
       "id": 1,
       "seek": 6000,
-      "start": 60.02,
-      "end": 69.44,
+      "start": 60.0,
+      "end": 69.42,
       "text": "...",
       "tokens": [
         50364,
@@ -38,15 +38,15 @@
         51714
       ],
       "temperature": 0.0,
-      "avg_logprob": -0.9681128859519958,
+      "avg_logprob": -0.9681128263473511,
       "compression_ratio": 0.2727272727272727,
       "no_speech_prob": 0.8783581256866455,
       "confidence": 0.467,
       "words": [
         {
           "text": "...",
-          "start": 60.02,
-          "end": 69.44,
+          "start": 60.0,
+          "end": 69.42,
           "confidence": 0.467
         }
       ]
@@ -54,11 +54,13 @@
     {
       "id": 2,
       "seek": 9000,
-      "start": 90.02,
+      "start": 90.0,
       "end": 90.52,
       "text": "...",
       "tokens": [
-        1097
+        50364,
+        1097,
+        51114
       ],
       "temperature": 0.0,
       "avg_logprob": -0.8225809097290039,
@@ -68,7 +70,7 @@
       "words": [
         {
           "text": "...",
-          "start": 90.02,
+          "start": 90.0,
           "end": 90.52,
           "confidence": 0.841
         }
@@ -77,25 +79,25 @@
     {
       "id": 3,
       "seek": 10500,
-      "start": 106.0,
-      "end": 117.7,
+      "start": 106.48,
+      "end": 108.62,
       "text": "...",
       "tokens": [
-        50364,
+        50414,
         1097,
-        51714
+        50864
       ],
       "temperature": 0.0,
-      "avg_logprob": -0.7174453139305115,
+      "avg_logprob": -0.9273021221160889,
       "compression_ratio": 0.2727272727272727,
-      "no_speech_prob": 0.25282058119773865,
-      "confidence": 0.763,
+      "no_speech_prob": 0.8327620625495911,
+      "confidence": 0.467,
       "words": [
         {
           "text": "...",
-          "start": 106.0,
-          "end": 117.7,
-          "confidence": 0.763
+          "start": 106.48,
+          "end": 108.62,
+          "confidence": 0.467
         }
       ]
     }

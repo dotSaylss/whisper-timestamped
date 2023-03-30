@@ -10,12 +10,14 @@ import shutil
 import tempfile
 import json
 import torch
+import jsonschema
 
 FAIL_IF_REFERENCE_NOT_FOUND = True
 GENERATE_NEW_ONLY = False
 GENERATE_ALL = False
 GENERATE_DEVICE_DEPENDENT = False
 SKIP_LONG_TEST_IF_CPU = True
+CMD_OPTIONS = []
 
 
 class TestHelper(unittest.TestCase):
@@ -42,10 +44,16 @@ class TestHelper(unittest.TestCase):
     def get_output_path(self, fn=None):
         if fn == None:
             return tempfile.gettempdir()
-        return os.path.join(tempfile.gettempdir(), fn)
+        return os.path.join(tempfile.gettempdir(), fn + self._extra_cmd_options())
 
     def get_expected_path(self, fn=None, check=False):
-        return self._get_path("tests/expected", fn, check=check)
+        return self._get_path("tests/expected" + self._extra_cmd_options(), fn, check=check)
+    
+    def _extra_cmd_options(self):
+        s = "".join([f.replace("-","").strip() for f in CMD_OPTIONS])
+        if s:
+            return "." + s
+        return ""
 
     def get_data_files(self, files=None, excluded_by_default=["apollo11.mp3", "music.mp4", "arabic.mp3", "japanese.mp3", "empty.wav"]):
         if files == None:
@@ -207,6 +215,8 @@ class TestHelper(unittest.TestCase):
 
 class TestHelperCli(TestHelper):
 
+    json_schema = None
+
     def _test_cli_(self, opts, name, files=None, extensions=["words.json"], prefix=None, one_per_call=True, device_specific=None):
         """
         Test command line
@@ -217,6 +227,8 @@ class TestHelperCli(TestHelper):
         prefix: prefix to add to the reference files
         one_per_call: if True, each file is processed separately, otherwise all files are processed by a single process
         """
+
+        opts = opts + CMD_OPTIONS
 
         output_dir = self.get_output_path(name)
 
@@ -258,6 +270,10 @@ class TestHelperCli(TestHelper):
                 print(stdout)
                 print(stderr)
 
+            output_json = self.get_generated_files(input_filename, output_dir, extensions=["words.json"]).__next__()
+            if os.path.isfile(output_json):
+                self.check_json(output_json)
+
             if extensions is None:
                 output_filename = list(self.get_generated_files(input_filename, output_dir, extensions=["stdout"]))[0]
                 self.assertNonRegression(stdout, ref_name(output_filename), string_is_file=False)
@@ -265,7 +281,20 @@ class TestHelperCli(TestHelper):
                 for output_filename in self.get_generated_files(input_filename, output_dir, extensions=extensions):
                     self.assertNonRegression(output_filename, ref_name(output_filename))
 
+
         shutil.rmtree(output_dir, ignore_errors=True)
+
+    def check_json(self, json_file):
+        with open(json_file) as f:
+            content = json.load(f)
+
+        if self.json_schema is None:
+            schema_file = os.path.join(os.path.dirname(__file__), "json_schema.json")
+            self.assertTrue(os.path.isfile(schema_file), msg=f"Schema file {schema_file} not found")
+            self.json_schema = json.load(open(schema_file))
+
+        jsonschema.validate(instance=content, schema=self.json_schema)
+
 
 
 class TestTranscribeTiny(TestHelperCli):
@@ -619,6 +648,9 @@ class TestZZZPythonImport(TestHelper):
 
     def test_split_tokens(self):
 
+        import whisper
+        whisperversion = whisper.__version__
+
         import whisper_timestamped as whisper
         from whisper_timestamped.transcribe import split_tokens_on_spaces
 
@@ -640,23 +672,124 @@ class TestZZZPythonImport(TestHelper):
                 [' wherever'],
                 [' you'],
                 [' come'],
-                [' up', ' '],
-                [' with', ',', ' '],
-                [' just'],
+                [' up'],
+                [' ', ' with', ','],
+                [' ', ' just'],
                 [' let'],
                 [' us'],
                 [' know', '.', ' '],
                 ['<|7.00|>']],
              [[50364],
                 [220, 6455, 11],
-                [2232, 11], [286], [2041, 11], [
-                    2232, 11], [8660], [291], [808],
-                [493, 220],
-                [365, 11, 220],
-                [445], [718], [505],
+                [2232, 11],
+                [286],
+                [2041, 11],
+                [2232, 11],
+                [8660],
+                [291],
+                [808],
+                [493],
+                [220, 365, 11],
+                [220, 445],
+                [718],
+                [505],
                 [458, 13, 220],
                 [50714]
               ])
+        )
+
+        tokens = [50366, 314, 6, 11771, 17134, 11, 4666, 11, 1022, 220, 875, 2557, 68, 11, 6992, 631, 269, 6, 377, 220, 409, 7282, 1956, 871, 566, 2707, 394, 1956, 256, 622, 8208, 631, 8208, 871, 517, 7282, 1956, 5977, 7418, 371, 1004, 306, 580, 11, 5977, 12, 9498, 9505, 84, 6, 50416]
+        self.assertEqual(
+            split_tokens_on_spaces(tokens, tokenizer),
+                (
+                ['<|0.04|>', "T'façon,", 'nous,', 'sur', 'la', 'touche,', 'parce', 'que', "c'est", 'un', 'sport', 'qui', 'est', 'important', 'qui', 'tue', 'deux', 'que', 'deux', 'est', 'un', 'sport', 'qui', 'peut', 'être', 'violent,', 'peut-être', "qu'", '<|1.04|>'],
+                [['<|0.04|>'],
+                 [' T', "'", 'fa', 'çon', ','],
+                    [' nous', ','],
+                    [' sur'],
+                    [' ', 'la'],
+                    [' touch', 'e', ','],
+                    [' parce'],
+                    [' que'],
+                    [' c', "'", 'est'],
+                    [' ', 'un'],
+                    [' sport'],
+                    [' qui'],
+                    [' est'],
+                    [' im', 'port', 'ant'],
+                    [' qui'],
+                    [' t', 'ue'],
+                    [' deux'],
+                    [' que'],
+                    [' deux'],
+                    [' est'],
+                    [' un'],
+                    [' sport'],
+                    [' qui'],
+                    [' peut'],
+                    [' être'],
+                    [' v', 'io', 'le', 'nt', ','],
+                    [' peut', '-', 'être'],
+                    [' q', 'u', "'"],
+                    ['<|1.04|>']],
+                [[50366],
+                 [314, 6, 11771, 17134, 11],
+                    [4666, 11],
+                    [1022],
+                    [220, 875],
+                    [2557, 68, 11],
+                    [6992],
+                    [631],
+                    [269, 6, 377],
+                    [220, 409],
+                    [7282],
+                    [1956],
+                    [871],
+                    [566, 2707, 394],
+                    [1956],
+                    [256, 622],
+                    [8208],
+                    [631],
+                    [8208],
+                    [871],
+                    [517],
+                    [7282],
+                    [1956],
+                    [5977],
+                    [7418],
+                    [371, 1004, 306, 580, 11],
+                    [5977, 12, 9498],
+                    [9505, 84, 6],
+                    [50416]]
+            )
+        )
+
+        tokens = [50364, 220, 220, 6455, 11, 220, 220, 2232, 220, 220, 11, 220, 50714]
+        self.assertEqual(
+            split_tokens_on_spaces(tokens, tokenizer),
+            (['<|0.00|>', 'So,', 'uh', ',', '<|7.00|>'],
+            [['<|0.00|>'],
+            [' ', ' ', 'So', ','],
+            [' ', ' ', ' uh'],
+            [' ', ' ', ',', ' '],
+            ['<|7.00|>']],
+            [[50364], [220, 220, 6455, 11], [220, 220, 2232], [220, 220, 11, 220], [50714]]
+            )
+        )
+
+        # Careful with the double spaces at the end...
+        tokens = [50364, 220, 220, 6455, 11, 220, 220, 2232, 220, 220, 11, 220, 220, 50714]
+        self.assertEqual(
+            split_tokens_on_spaces(tokens, tokenizer),
+            (['<|0.00|>', 'So,', 'uh', ',', '', '<|7.00|>'],
+            [['<|0.00|>'],
+            [' ', ' ', 'So', ','],
+            [' ', ' ', ' uh'],
+            [' ', ' ', ','],
+            [' ', ' '],
+            ['<|7.00|>']],
+            [[50364], [220, 220, 6455, 11], [220, 220, 2232], [220, 220, 11], [220, 220], [50714]]
+            )
         )
 
         # Tokens that could be removed
@@ -669,15 +802,28 @@ class TestZZZPythonImport(TestHelper):
             )
         )
 
+        # issue #61
+        # Special tokens that are not timestamps
+        tokens = [50414, 805, 12, 17, 50299, 11, 568, 12, 18, 12, 21, 11, 502, 12, 17, 12, 51464]
+        # 50299 is "<|te|>" and appears as ""
+        te = ""
+        self.assertEqual(
+            split_tokens_on_spaces(tokens, tokenizer),
+            (['<|1.00|>', f'3-2{te},', '2-3-6,', '1-2-', '<|22.00|>'],
+             [['<|1.00|>'], [' 3', '-', '2', f'{te}', ','], [' 2', '-', '3', '-','6', ','], [' 1', '-', '2', '-'], ['<|22.00|>']],
+             [[50414], [805, 12, 17, 50299, 11], [568, 12, 18, 12, 21, 11], [502, 12, 17, 12], [51464]])
+        )
+
         tokenizer = whisper.tokenizer.get_tokenizer(False, language="en")
 
         # Just a punctuation character
         tokens = [50363, 764, 51813]
 
+        _dot = "." if whisperversion < "20230314" else " ."
         self.assertEqual(
             split_tokens_on_spaces(tokens, tokenizer),
-            (['<|0.00|>', '.', '<|29.00|>'],
-                [['<|0.00|>'], ['.'], ['<|29.00|>']],
+            (['<|0.00|>', ".", '<|29.00|>'],
+                [['<|0.00|>'], [_dot], ['<|29.00|>']],
                 [[50363], [764], [51813]]
             )
         )

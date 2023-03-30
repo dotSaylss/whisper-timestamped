@@ -3,12 +3,17 @@
 Multilingual Automatic Speech Recognition with word-level timestamps and confidence.
 
 * [Description](#description)
+   * [Notes on other approaches](#notes-on-other-approaches)
 * [Installation](#installation)
+   * [First installation](#first-installation)
+   * [Light installation for CPU](#light-installation-for-cpu)
+   * [Upgrade to the latest version](#upgrade-to-the-latest-version)
 * [Usage](#usage)
    * [Python](#python)
    * [Command line](#command-line)
    * [Plotting word alignment](#plotting-word-alignment)
    * [Example output](#example-output)
+   * [Options that may improve results](#options-that-may-improve-results)
 * [Acknowlegment](#acknowlegment)
 * [Citations](#citations)
 
@@ -27,6 +32,9 @@ There are some additions to this notebook:
 * Confidence scores are assigned to each word.
 * **If possible (without beam search...)**, there no additional inference steps are required to predict word timestamps (word alignment is done on the fly, after each speech segment is decoded).
 * There is a special care about memory usage: `whisper-timestamped` is able to process long files, with little additional memory with respect to the regular use of Whisper model.
+
+`whisper-timestamped` is an extension of [`openai-whisper`](https://pypi.org/project/whisper-openai/) python package
+and is meant to compatible with any version of `openai-whisper`.
 
 ### Notes on other approaches
 
@@ -51,6 +59,8 @@ Also the timestamp precision of Whisper models tend to be rounded to 1 second (a
 
 ## Installation
 
+### First installation
+
 Requirements:
 * `python3` (version higher or equal to 3.7, at least 3.9 is recommended)
 * `ffmpeg` (see instructions for installation on the [whisper repository](https://github.com/openai/whisper)
@@ -71,9 +81,41 @@ If you want to plot alignement between audio timestamps and words (as in [this s
 pip3 install matplotlib
 ```
 
+A docker image of about 9GB can be built using:
+```bash
+git clone https://github.com/linto-ai/whisper-timestamped
+cd whisper-timestamped/
+docker build -t whisper_timestamped:latest .
+```
+
+### Light installation for CPU
+
+If you don't have GPU (or don't want to use it), then you don't need to install CUDA dependencies.
+You should then just install a light version of torch **before** installing whisper-timestamped, for instance as follows:
+```bash
+pip3 install \
+     torch==1.13.1+cpu \
+     torchaudio==0.13.1+cpu \
+     -f https://download.pytorch.org/whl/torch_stable.html
+```
+
+A specific docker image of about 3.5GB can also be built using:
+```bash
+git clone https://github.com/linto-ai/whisper-timestamped
+cd whisper-timestamped/
+docker build -t whisper_timestamped_cpu:latest -f Dockerfile.cpu .
+```
+
+### Upgrade to the latest version
+
 When using pip, the library can be updated to the latest version using
 ```
-pip install --upgrade --no-deps --force-reinstall git+https://github.com/linto-ai/whisper-timestamped
+pip3 install --upgrade --no-deps --force-reinstall git+https://github.com/linto-ai/whisper-timestamped
+```
+
+A specific version of `openai-whisper` can be used by running, for example:
+```bash
+pip3 install openai-whisper==20230124
 ```
 
 ## Usage
@@ -139,10 +181,13 @@ whisper_timestamped audio1.flac audio2.mp3 audio3.wav --model tiny --output_dir 
 ### Plot of word alignment
 
 Note that you can use option `plot_word_alignment` of python function `whisper_timestamped.transcribe()`, or option `--plot` of `whisper_timestamped` CLI in order to see the word alignment for each segment.
-The upper plot represents the transformation of cross-attention weights that is used for DTW;
-The lower plot is a MFCC representation of the input signal (features used by Whisper).
 
 ![Example alignement](figs/example_alignement_plot.png)
+
+* The upper plot represents the transformation of cross-attention weights that is used for the alignement with Dynamic Time Warping.
+The abscissa represents the time and the ordinate represents the predicted tokens; with special timestamp tokens at first and at last, and then (sub)words and punctuations in the middle.
+* The lower plot is a MFCC representation of the input signal (features used by Whisper, based on Mel-frequency cepstrum).
+* The vertical dotted red lines show where the word boundaries are found (with punctuation marks "glued" with the previous word).
 
 ### Example output
 
@@ -224,6 +269,54 @@ whisper_timestamped AUDIO_FILE.wav --model tiny --language fr
   "language": "fr"
 }
 ```
+
+### Options that may improve results
+
+Here are some options not abled by default that might improve results.
+
+#### Accurate Whisper transcription
+
+As mentioned before, some decoding options are disabled by default for offering a better efficiency.
+But the quality of the transcription can be impacted.
+To run with the options that have the best chance to provide a good transcription, use the following options.
+* In python:
+```python
+results = whisper_timestamped.transcribe(model, audio, beam_size=5, best_of=5, temperature=(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), ...)
+```
+* In the command line:
+```bash
+whisper_timestamped --accurate ...
+```
+
+#### Running Voice Activity Detection (VAD) before sending to Whisper
+
+Whisper models can "hallucinate" text when a segment without speech is given.
+This can be avoided by running VAD and gluing speech segments together before transcribing with the Whisper model.
+This is possible in `whisper-timestamped`.
+* In python:
+```python
+results = whisper_timestamped.transcribe(model, audio, vad=True, ...)
+```
+* In the command line:
+```bash
+whisper_timestamped --vad True ...
+```
+
+#### Detecting disfluencies
+
+Whisper models tend to remove speech disfluencies (filler words, hesitations, repetitions, ...).
+Without precautions, the disfluencies that are not transcribed will have an influence on the timestamp of the word that follows: the timestamp of the beginning of the word will actually be the timestamp of the beginning of the disfluencies.
+`whisper-timestamped` can implement some heuristics to avoid that.
+* In python:
+```python
+results = whisper_timestamped.transcribe(model, audio, detect_disfluencies=True, ...)
+```
+* In the command line:
+```bash
+whisper_timestamped --detect_disfluencies True ...
+```
+**Important:** Note that when using this options, possible disfluencies will appear in the transcription as a special "`[*]`" word.
+
 
 ## Acknowlegment
 * [whisper](https://github.com/openai/whisper): Whisper speech recognition (License MIT).
